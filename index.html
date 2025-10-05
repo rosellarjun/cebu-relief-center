@@ -1,0 +1,1866 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+    <title>Cebu Relief Center - Earthquake Emergency Response</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
+    <script type="module">
+      import { firebaseConfig } from "./firebase-config.js";
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+      import {
+        getDatabase,
+        ref,
+        push,
+        onValue,
+        update,
+      } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+      const app = initializeApp(firebaseConfig);
+      const database = getDatabase(app);
+      window.db = database;
+      window.dbRef = ref;
+      window.dbPush = push;
+      window.dbOnValue = onValue;
+      window.dbUpdate = update;
+    </script>
+
+    <style>
+      .ping-urgency {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 38px;
+        height: 38px;
+        z-index: 0;
+        pointer-events: none;
+      }
+      .ping-high {
+        animation: ping-red 1.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+        background: rgba(239, 68, 68, 0.4);
+        border-radius: 9999px;
+      }
+      .ping-medium {
+        animation: ping-orange 1.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+        background: rgba(251, 146, 60, 0.4);
+        border-radius: 9999px;
+      }
+      .ping-low {
+        animation: ping-yellow 1.2s cubic-bezier(0, 0, 0.2, 1) infinite;
+        background: rgba(234, 179, 8, 0.4);
+        border-radius: 9999px;
+      }
+      @keyframes ping-red {
+        75%,
+        100% {
+          transform: translate(-50%, -50%) scale(2);
+          opacity: 0;
+        }
+        0% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 1;
+        }
+      }
+      @keyframes ping-orange {
+        75%,
+        100% {
+          transform: translate(-50%, -50%) scale(2);
+          opacity: 0;
+        }
+        0% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 1;
+        }
+      }
+      @keyframes ping-yellow {
+        75%,
+        100% {
+          transform: translate(-50%, -50%) scale(2);
+          opacity: 0;
+        }
+        0% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 1;
+        }
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      @media (max-width: 640px) {
+        .max-w-7xl {
+          max-width: 100vw !important;
+          padding-left: 0 !important;
+          padding-right: 0 !important;
+        }
+        .px-4 {
+          padding-left: 0.5rem !important;
+          padding-right: 0.5rem !important;
+        }
+        .py-6 {
+          padding-top: 1rem !important;
+          padding-bottom: 1rem !important;
+        }
+        .rounded-lg {
+          border-radius: 0.75rem !important;
+        }
+        .shadow-lg {
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+        }
+        .grid-cols-1,
+        .lg\:grid-cols-3 {
+          grid-template-columns: 1fr !important;
+        }
+        .lg\:col-span-2 {
+          grid-column: span 1 / span 1 !important;
+        }
+        .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+          --tw-space-y-reverse: 0;
+          margin-top: 1.25rem !important;
+          margin-bottom: 0 !important;
+        }
+        .h-96,
+        .lg\:h-\[800px\] {
+          height: 300px !important;
+        }
+        .p-6 {
+          padding: 1rem !important;
+        }
+        .text-lg {
+          font-size: 1.1rem !important;
+        }
+        .text-xl {
+          font-size: 1.2rem !important;
+        }
+        .text-2xl {
+          font-size: 1.3rem !important;
+        }
+        .text-3xl {
+          font-size: 1.5rem !important;
+        }
+        .max-w-xs,
+        .max-w-2xl {
+          max-width: 98vw !important;
+        }
+        .overflow-y-auto {
+          max-height: 90vh !important;
+        }
+        .flex.items-center.justify-between.flex-wrap.gap-4 {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.5rem;
+        }
+        .flex.items-center.space-x-3 {
+          flex-direction: row;
+          gap: 0.5rem;
+        }
+        .flex.flex-row.overflow-x-auto.no-scrollbar.whitespace-nowrap {
+          flex-wrap: nowrap;
+          overflow-x: auto;
+        }
+        .p-4.bg-gray-50.border-b.flex.items-center.justify-between {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.5rem;
+        }
+        #map {
+          height: 70vh !important; /* Use 70% of the viewport height */
+          min-height: 350px !important;
+          max-height: 80vh !important;
+        }
+        main.max-w-7xl {
+          padding-top: 0 !important;
+          padding-bottom: 0 !important;
+        }
+        body {
+          padding: 0 !important;
+          margin: 0 !important;
+        }
+      }
+      .map-action-buttons {
+        position: absolute;
+        right: 1.5rem;
+        bottom: 3.5rem; /* Above Leaflet attribution */
+        z-index: 1001;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      @media (max-width: 640px) {
+        .map-action-buttons {
+          right: 0.5rem;
+          bottom: 4.5rem;
+          gap: 0.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50">
+    <header
+      class="bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg"
+    >
+      <div class="max-w-7xl mx-auto px-4 py-4">
+        <div class="flex flex-row items-center justify-between gap-2 text-left">
+          <div class="flex items-center">
+            <div>
+              <h1 class="text-xl font-bold">Cebu Relief Center</h1>
+              <p class="text-blue-100 text-sm">Earthquake Emergency Response</p>
+            </div>
+          </div>
+          <div class="flex flex-col items-end">
+            <div class="text-sm text-blue-100 flex items-center gap-1">
+              <span>📍</span>
+              Your Location:
+            </div>
+            <div class="font-semibold" id="locationDisplay">Detecting...</div>
+          </div>
+        </div>
+      </div>
+    </header>
+    <div class="bg-white border-b shadow-sm sticky top-0 z-[200]">
+      <div class="max-w-7xl mx-auto px-2">
+        <div
+          class="flex flex-row overflow-x-auto no-scrollbar whitespace-nowrap"
+        >
+          <button
+            onclick="switchTab('map')"
+            id="tab-map"
+            class="tab-button px-4 py-2 text-xs sm:text-sm font-medium border-b-2 border-blue-600 text-blue-600"
+          >
+            Map View
+          </button>
+          <button
+            onclick="switchTab('reports')"
+            id="tab-reports"
+            class="tab-button px-4 py-2 text-xs sm:text-sm font-medium border-b-2 border-transparent text-gray-600 hover:text-gray-900"
+          >
+            All Reports
+          </button>
+          <button
+            onclick="switchTab('stats')"
+            id="tab-stats"
+            class="tab-button px-4 py-2 text-xs sm:text-sm font-medium border-b-2 border-transparent text-gray-600 hover:text-gray-900"
+          >
+            Statistics
+          </button>
+        </div>
+      </div>
+    </div>
+    <main class="max-w-7xl mx-auto px-4 py-6">
+      <div id="content-map" class="tab-content">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg shadow-lg border-t overflow-hidden">
+              <div
+                class="p-4 bg-gray-50 border-b flex items-center justify-between flex-wrap gap-2"
+              >
+                <h2 class="text-lg font-semibold text-gray-800">
+                  Interactive Relief Map
+                </h2>
+              </div>
+              <div class="hidden sm:flex gap-2 px-4 py-2 bg-white border-b">
+                <button
+                  onclick="filterReports('all')"
+                  id="filter-all"
+                  class="px-4 py-1.5 text-xs rounded-full font-medium bg-blue-600 text-white transition"
+                >
+                  All
+                </button>
+                <button
+                  onclick="filterReports('help')"
+                  id="filter-help"
+                  class="px-4 py-1.5 text-xs rounded-full font-medium bg-gray-200 text-gray-700 transition"
+                >
+                  Help Needed
+                </button>
+                <button
+                  onclick="filterReports('relief')"
+                  id="filter-relief"
+                  class="px-4 py-1.5 text-xs rounded-full font-medium bg-gray-200 text-gray-700 transition"
+                >
+                  Relief Available
+                </button>
+              </div>
+              <div class="flex gap-2 px-4 py-2 bg-white border-b sm:hidden">
+                <button
+                  onclick="filterReports('all')"
+                  id="filter-all-mobile"
+                  class="px-4 py-1.5 text-xs rounded-full font-medium bg-blue-600 text-white transition"
+                >
+                  All
+                </button>
+                <button
+                  onclick="filterReports('help')"
+                  id="filter-help-mobile"
+                  class="px-4 py-1.5 text-xs rounded-full font-medium bg-gray-200 text-gray-700 transition"
+                >
+                  Help Needed
+                </button>
+                <button
+                  onclick="filterReports('relief')"
+                  id="filter-relief-mobile"
+                  class="px-4 py-1.5 text-xs rounded-full font-medium bg-gray-200 text-gray-700 transition"
+                >
+                  Relief Available
+                </button>
+              </div>
+              <div
+                id="map"
+                class="w-full h-96 lg:h-[800px] z-10"
+                style="position: relative"
+              >
+                <div class="map-action-buttons">
+                  <button
+                    onclick="openReportModal('help')"
+                    class="bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-full flex items-center justify-center shadow-lg transition"
+                    title="Pin my Location"
+                  >
+                    <svg
+                      class="w-5 h-5 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 21c4.418 0 8-7.164 8-11.5A8 8 0 104 9.5C4 13.836 7.582 21 12 21z"
+                      />
+                      <circle cx="12" cy="9.5" r="3" fill="currentColor" />
+                    </svg>
+                    Pin my Location
+                  </button>
+                  <button
+                    onclick="openReportModal('relief')"
+                    class="bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-full flex items-center justify-center shadow-lg transition"
+                    title="I want to help"
+                  >
+                    <svg
+                      class="w-5 h-5 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      </path>
+                    </svg>
+                    I want to help
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="space-y-6">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+              <h3 class="text-lg font-semibold text-gray-800 mb-2">
+                Map Legend
+              </h3>
+              <p class="text-xs text-gray-500 mb-4">
+                Symbols below indicate the type and urgency of reports shown on
+                the map.
+              </p>
+              <div class="space-y-3">
+                <div class="flex items-center space-x-3">
+                  <div
+                    class="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center text-white text-xs font-bold"
+                  >
+                    !
+                  </div>
+                  <span class="text-sm text-gray-700">High Urgency Help</span>
+                </div>
+                <div class="flex items-center space-x-3">
+                  <div
+                    class="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center text-white text-xs font-bold"
+                  >
+                    !
+                  </div>
+                  <span class="text-sm text-gray-700">Medium Urgency Help</span>
+                </div>
+                <div class="flex items-center space-x-3">
+                  <div
+                    class="w-6 h-6 rounded-full bg-yellow-500 flex items-center justify-center text-white text-xs font-bold"
+                  >
+                    !
+                  </div>
+                  <span class="text-sm text-gray-700">Low Urgency Help</span>
+                </div>
+                <div class="flex items-center space-x-3">
+                  <div
+                    class="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white text-xs font-bold"
+                  >
+                    ✓
+                  </div>
+                  <span class="text-sm text-gray-700">Relief Available</span>
+                </div>
+                <div class="flex items-center space-x-3">
+                  <div
+                    style="
+                      background: #2563eb;
+                      width: 24px;
+                      height: 24px;
+                      border-radius: 50%;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      position: relative;
+                    "
+                  >
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      style="display: block"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <circle cx="12" cy="12" r="6" fill="#fff" />
+                      <circle cx="12" cy="12" r="3" fill="#2563eb" />
+                    </svg>
+                  </div>
+                  <span class="text-sm text-gray-700">Your Location</span>
+                </div>
+              </div>
+            </div>
+            <div class="bg-white rounded-lg shadow-lg p-6">
+              <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                Statistics
+              </h3>
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <p class="text-sm text-gray-600">Total Reports</p>
+                  <p class="text-2xl font-bold text-gray-800" id="stat-total-sidebar">
+                    0
+                  </p>
+                </div>
+                <div>
+                  <p class="text-sm text-gray-600">Help Needed</p>
+                  <p class="text-2xl font-bold text-red-600" id="stat-help-sidebar">0</p>
+                </div>
+                <div>
+                  <p class="text-sm text-gray-600">Relief Available</p>
+                  <p class="text-2xl font-bold text-green-600" id="stat-relief-sidebar">
+                    0
+                  </p>
+                </div>
+                <div>
+                  <p class="text-sm text-gray-600">People Affected</p>
+                  <p class="text-2xl font-bold text-orange-600" id="stat-people-sidebar">
+                    0
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="bg-white rounded-lg shadow-lg p-6">
+              <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                Recent Reports
+              </h3>
+              <div
+                id="recentReports"
+                class="space-y-3 max-h-64 overflow-y-auto"
+              >
+                <p class="text-sm text-gray-500">No reports yet</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="content-reports" class="tab-content hidden">
+        <div class="bg-white rounded-lg shadow-lg">
+          <div class="p-6 border-b">
+            <h2 class="text-xl font-semibold text-gray-800">
+              All Emergency Reports
+            </h2>
+          </div>
+          <div class="p-6">
+            <div id="allReportsList" class="space-y-4">
+              <p class="text-gray-500">No reports available</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="content-stats" class="tab-content hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600">Total Reports</p>
+                <p class="text-3xl font-bold text-gray-800" id="stat-total">
+                  0
+                </p>
+              </div>
+              <div
+                class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center"
+              >
+                <svg
+                  class="w-6 h-6 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600">Help Needed</p>
+                <p class="text-3xl font-bold text-red-600" id="stat-help">0</p>
+              </div>
+              <div
+                class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center"
+              >
+                <svg
+                  class="w-6 h-6 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600">Relief Available</p>
+                <p class="text-3xl font-bold text-green-600" id="stat-relief">
+                  0
+                </p>
+              </div>
+              <div
+                class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center"
+              >
+                <svg
+                  class="w-6 h-6 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-gray-600">People Affected</p>
+                <p class="text-3xl font-bold text-orange-600" id="stat-people">
+                  0
+                </p>
+              </div>
+              <div
+                class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center"
+              >
+                <svg
+                  class="w-6 h-6 text-orange-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-lg p-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            Category Breakdown
+          </h3>
+          <div
+            id="categoryStats"
+            class="grid grid-cols-2 md:grid-cols-3 gap-4"
+          ></div>
+        </div>
+        <div
+          class="bg-yellow-50 border-l-4 border-yellow-400 rounded-lg shadow-lg p-6 mt-8"
+        >
+          <h3
+            class="text-xl font-bold text-yellow-800 mb-2 flex items-center gap-2"
+          >
+            <svg
+              class="w-6 h-6 text-yellow-500"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z"
+              />
+            </svg>
+            𝗟𝗢𝗢𝗞 | 𝗘𝗠𝗘𝗥𝗚𝗘𝗡𝗖𝗬 𝗛𝗢𝗧𝗟𝗜𝗡𝗘 𝗡𝗨𝗠𝗕𝗘𝗥𝗦
+          </h3>
+          <p class="text-gray-700 mb-4 text-sm">
+            With the aftermath of the
+            <span class="font-semibold">6.9-magnitude earthquake</span> that
+            struck Cebu on Tuesday, September 30, 2025, aftershocks are still
+            happening and are expected to happen. To ensure everyone's safety,
+            these emergency hotlines within Cebu and Barili will assure easy
+            access to important dials for emergency and evacuation.
+            <span class="font-semibold">Amping kanunay, Cebuanos!</span>
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4
+                class="font-bold text-yellow-700 mb-2 flex items-center gap-2"
+              >
+                📍 𝗘𝗠𝗘𝗥𝗚𝗘𝗡𝗖𝗬 𝗛𝗢𝗧𝗟𝗜𝗡𝗘 𝗡𝗨𝗠𝗕𝗘𝗥𝗦 𝗪𝗜𝗧𝗛𝗜𝗡 𝗖𝗘𝗕𝗨
+              </h4>
+              <ul class="text-gray-800 text-sm space-y-1">
+                <li>
+                  <span class="font-semibold"
+                    >Cebu Province Emergency Hotline:</span
+                  >
+                  911
+                </li>
+                <li>
+                  <span class="font-semibold"
+                    >Cebu Provincial Disaster Risk Reduction Management
+                    Office:</span
+                  >
+                  255-0046
+                </li>
+                <li>
+                  <span class="font-semibold"
+                    >Cebu City Disaster Risk Reduction and Management
+                    Office:</span
+                  >
+                  0932 537 7770 / 0917 839 9896
+                </li>
+                <li>
+                  <span class="font-semibold"
+                    >Philippine Red Cross Emergency Medical Services:</span
+                  >
+                  0915 5839 829
+                </li>
+                <li>
+                  <span class="font-semibold"
+                    >Philippine Red Cross Youth - Cebu Charter:</span
+                  >
+                  (32) 328 9238
+                </li>
+                <li>
+                  <span class="font-semibold"
+                    >Bureau of Fire and Protection Cebu City:</span
+                  >
+                  160 / 256-0541/2 / 09427907907
+                </li>
+                <li>
+                  <span class="font-semibold"
+                    >Cebu City Command and Control Center:</span
+                  >
+                  262-1424 / 166 / 09325377770 / 09235248222
+                </li>
+                <li>
+                  <span class="font-semibold"
+                    >Emergency Rescue Unit Foundation (ERUF):</span
+                  >
+                  161 / 0918 921 0000 / 233-9300 / 255-7287
+                </li>
+              </ul>
+              <div class="mt-3">
+                <span class="font-semibold text-yellow-700"
+                  >Contact Information for Hospitals:</span
+                >
+                <ul class="text-gray-800 text-sm space-y-1 mt-1">
+                  <li>
+                    <span class="font-semibold">Chong Hua Hospital:</span> (32)
+                    254-1461 / (32) 254-3228 / (32) 353-9409 / (32) 255-8000
+                  </li>
+                  <li>
+                    <span class="font-semibold">Cebu Doctor’s Hospital:</span>
+                    (32) 253-7511 / (32) 253-7516 / (32) 255-5555
+                  </li>
+                  <li>
+                    <span class="font-semibold"
+                      >St. Vincent General Hospital:</span
+                    >
+                    6332 254-4206 / 253-8296
+                  </li>
+                  <li>
+                    <span class="font-semibold">Sacred Heart Hospital:</span>
+                    (32)254-1841 / (32) 254-8821
+                  </li>
+                  <li>
+                    <span class="font-semibold"
+                      >Cebu Velez General Hospital:</span
+                    >
+                    (32) 253-1871
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div>
+              <h4
+                class="font-bold text-yellow-700 mb-2 flex items-center gap-2"
+              >
+                📍 𝗘𝗠𝗘𝗥𝗚𝗘𝗡𝗖𝗬 𝗛𝗢𝗧𝗟𝗜𝗡𝗘 𝗡𝗨𝗠𝗕𝗘𝗥𝗦 𝗪𝗜𝗧𝗛𝗜𝗡 𝗕𝗔𝗥𝗜𝗟𝗜
+              </h4>
+              <ul class="text-gray-800 text-sm space-y-1">
+                <li>
+                  <span class="font-semibold">BARILI POLICE STATION:</span>
+                  0998-598-6361 / (032) 517-2450
+                </li>
+                <li>
+                  <span class="font-semibold">BARILI MDRRMO:</span>
+                  0918-637-6365 / 0927-537-3136
+                </li>
+                <li>
+                  <span class="font-semibold"
+                    >MANTALONGON FIRE SUB-STATION:</span
+                  >
+                  0960-460-0329
+                </li>
+                <li>
+                  <span class="font-semibold">BARILI MFG INFIRMARY:</span>
+                  0970-558-0536 / (032) 517-2264
+                </li>
+                <li>
+                  <span class="font-semibold">BARILI FIRE STATION:</span>
+                  0969-410-1951 / (032) 517-0833
+                </li>
+                <li>
+                  <span class="font-semibold">BARILI RHU:</span> (032) 517-2835
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <div
+      id="reportModal"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-[1000] flex items-center justify-center p-4"
+    >
+      <div
+        class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-screen overflow-y-auto"
+      >
+        <div class="p-6 border-b flex items-center justify-between">
+          <h3 class="text-xl font-semibold text-gray-800" id="modalTitle">
+            Submit Report
+          </h3>
+          <button
+            onclick="closeReportModal()"
+            class="text-gray-400 hover:text-gray-600"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+        <form id="reportForm" class="p-6 space-y-4">
+          <input type="hidden" id="reportType" name="type" />
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2"
+              >Category</label
+            >
+            <select
+              id="category"
+              name="category"
+              required
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="medical">🏥 Medical Emergency</option>
+              <option value="food">🍲 Food & Water</option>
+              <option value="shelter">🏠 Shelter</option>
+              <option value="rescue">🚑 Rescue Needed</option>
+              <option value="supplies">📦 General Supplies</option>
+              <option value="other">🔧 Other</option>
+            </select>
+          </div>
+
+          <div id="urgencyField">
+            <label class="block text-sm font-medium text-gray-700 mb-2"
+              >Urgency Level</label
+            >
+            <div class="grid grid-cols-3 gap-3">
+              <label
+                class="relative flex items-center justify-center px-4 py-3 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-yellow-500 transition"
+              >
+                <input
+                  type="radio"
+                  name="urgency"
+                  value="low"
+                  class="sr-only peer"
+                />
+                <span
+                  class="peer-checked:text-yellow-600 peer-checked:font-semibold"
+                  >Low</span
+                >
+                <div
+                  class="absolute inset-0 border-2 border-yellow-500 rounded-lg opacity-0 peer-checked:opacity-100"
+                ></div>
+              </label>
+              <label
+                class="relative flex items-center justify-center px-4 py-3 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-orange-500 transition"
+              >
+                <input
+                  type="radio"
+                  name="urgency"
+                  value="medium"
+                  checked
+                  class="sr-only peer"
+                />
+                <span
+                  class="peer-checked:text-orange-600 peer-checked:font-semibold"
+                  >Medium</span
+                >
+                <div
+                  class="absolute inset-0 border-2 border-orange-500 rounded-lg opacity-0 peer-checked:opacity-100"
+                ></div>
+              </label>
+              <label
+                class="relative flex items-center justify-center px-4 py-3 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-red-500 transition"
+              >
+                <input
+                  type="radio"
+                  name="urgency"
+                  value="high"
+                  class="sr-only peer"
+                />
+                <span
+                  class="peer-checked:text-red-600 peer-checked:font-semibold"
+                  >High</span
+                >
+                <div
+                  class="absolute inset-0 border-2 border-red-500 rounded-lg opacity-0 peer-checked:opacity-100"
+                ></div>
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2"
+              >Description</label
+            >
+            <textarea
+              id="description"
+              name="description"
+              rows="4"
+              required
+              placeholder="Provide details about the situation..."
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            ></textarea>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Contact Name</label
+              >
+              <input
+                type="text"
+                id="contactName"
+                name="contactName"
+                required
+                placeholder="Your name"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Contact Phone</label
+              >
+              <input
+                type="tel"
+                id="contactPhone"
+                name="contactPhone"
+                required
+                placeholder="09XX XXX XXXX"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+          <div id="peopleAffectedField">
+            <label
+              id="peopleAffectedLabel"
+              class="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Number of People Affected (Optional)
+            </label>
+            <input
+              type="number"
+              id="peopleAffected"
+              name="peopleAffected"
+              min="1"
+              placeholder="e.g., 5"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p class="text-sm text-blue-800">
+              <strong>Location:</strong>
+              <span id="modalLocation">Click on the map to set location</span>
+            </p>
+          </div>
+
+          <div class="flex gap-3 pt-4">
+            <button
+              type="submit"
+              class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition"
+            >
+              Submit Report
+            </button>
+            <button
+              type="button"
+              onclick="closeReportModal()"
+              class="px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div
+      id="intensityModal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="intensityModalTitle"
+      class="fixed inset-0 bg-black bg-opacity-50 z-[2000] flex items-center justify-center hidden"
+    >
+      <div
+        class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-screen overflow-y-auto"
+      >
+        <div class="p-6 border-b flex items-center justify-between">
+          <h3
+            id="intensityModalTitle"
+            class="text-xl font-semibold text-yellow-800 flex flex-col sm:flex-row items-start sm:items-center gap-2"
+          >
+            <span class="flex items-center gap-2">
+              Reported Earthquake Intensities
+            </span>
+            <span
+              class="ml-0 sm:ml-2 mt-2 sm:mt-0 text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-bold text-center"
+              style="min-width: 0"
+            >
+              Most Damaged: City of Bogo, Cebu
+            </span>
+          </h3>
+          <button
+            onclick="closeIntensityModal()"
+            class="text-gray-400 hover:text-gray-600 ml-2 sm:ml-0 mt-2 sm:mt-0"
+          >
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+        <div class="p-6 text-sm text-yellow-900 space-y-3">
+          <div>
+            <span class="font-semibold">Intensity VII:</span>
+            City of Bogo, Daanbantayan, Medellin, San Remigio, and Tabuelan,
+            <span class="font-bold">CEBU</span>
+          </div>
+          <div>
+            <span class="font-semibold">Intensity VI:</span>
+            Murcia, <span class="font-bold">NEGROS OCCIDENTAL</span>; Bantayan,
+            Borbon, Catmon, and Sogod, <span class="font-bold">CEBU</span>
+          </div>
+          <div>
+            <span class="font-semibold">Intensity V:</span>
+            Cataingan, Esperanza, and Pio V. Corpuz,
+            <span class="font-bold">MASBATE</span>; City of Cadiz, Hinigaran,
+            Moises Padilla, City of San Carlos, San Enrique, City of Sipalay,
+            and Toboso, <span class="font-bold">NEGROS OCCIDENTAL</span>; Dauis,
+            City of Tagbilaran, and Talibon,
+            <span class="font-bold">BOHOL</span>; Alcoy, Argao, Asturias,
+            Carmen, Compostela, Consolacion, Dalaguete, Danao City, Liloan,
+            Oslob, Samboan, San Fernando, and Santander,
+            <span class="font-bold">CEBU</span>; CITY OF CEBU; CITY OF
+            LAPU-LAPU; Almeria, Biliran, Cabucgayan, Caibiran, Culaba, Kawayan,
+            Maripipi, and Naval, <span class="font-bold">BILIRAN</span>; ...
+            (see full list below)
+          </div>
+          <details>
+            <summary class="cursor-pointer text-yellow-700 underline">
+              Show full intensity list
+            </summary>
+            <pre
+              class="whitespace-pre-wrap text-xs mt-2 text-yellow-900 bg-yellow-100 rounded p-2 overflow-x-auto"
+              style="max-height: 300px"
+            >
+Intensity VII - City of Bogo, Daanbantayan, Medellin, San Remigio, and Tabuelan, CEBU
+
+Intensity VI - Murcia, NEGROS OCCIDENTAL; Bantayan, Borbon, Catmon, and Sogod, CEBU
+
+Intensity V - Cataingan, Esperanza, and Pio V. Corpuz, MASBATE; City of Cadiz, Hinigaran, Moises Padilla, City of San Carlos, San Enrique, City of Sipalay, and Toboso, NEGROS OCCIDENTAL; Dauis, City of Tagbilaran, and Talibon,
+BOHOL; Alcoy, Argao, Asturias, Carmen, Compostela, Consolacion, Dalaguete, Danao City, Liloan, Oslob, Samboan, San Fernando, and Santander, CEBU; CITY OF CEBU; CITY OF LAPU-LAPU; Almeria, Biliran, Cabucgayan, Caibiran,
+Culaba, Kawayan, Maripipi, and Naval, BILIRAN; Abuyog, Alangalang, Albuera, Babatngon, Barugo, Bato, City of Baybay, Burauen, Calubian, Capoocan, Carigara, Dagami, Dulag, Hilongos, Hindang, Inopacan, Isabel, Jaro,
+Javier, Julita, Kananga, La Paz, Leyte, Macarthur, Matag-Ob, Matalom, Mayorga, Merida, Palo, Palompon, Pastrana, San Isidro, San Miguel, Santa Fe, Tabango, Tabontabon, Tanauan, Tolosa, Tunga, and Villaba, LEYTE; ORMOC
+CITY; CITY OF TACLOBAN
+
+Intensity IV - City of Ligao, ALBAY; Dimasalang, Mandaon, City of Masbate, Milagros, Monreal, Palanas, San Fernando, and San Jacinto, MASBATE; Bulan, Bulusan, Casiguran, Irosin, Magallanes, and Pilar, SORSOGON; Dao, City of
+Roxas, and Sigma, CAPIZ; Leganes, ILOILO; City of Bago, City of Himamaylan, Ilog, and City of Kabankalan, NEGROS OCCIDENTAL; Ubay, BOHOL; Amlan, Bacong, City of Bais, City of Bayawan, Dauin, San Jose, Santa Catalina, City
+of Tanjay, and Zamboanguita, NEGROS ORIENTAL; Arteche, City of Borongan, Can-Avid, Dolores, General Macarthur, Guiuan, Hernani, Lawaan, Mercedes, Oras, Salcedo, San Julian, Sulat, and Taft, EASTERN SAMAR; Mahaplag,
+LEYTE; Allen, Bobon, Catarman, Catubig, Gamay, Laoang, Lapinig, Lope De Vega, Mapanas, Mondragon, Palapag, Pambujan, Rosario, San Antonio, San Roque, and Victoria, NORTHERN SAMAR; Almagro, City of Calbayog, City of
+Catbalogan, Marabut, San Jorge, and Tagapul-an, SAMAR; Anahawan, Bontoc, Hinunangan, Hinundayan, Libagon, Liloan, Limasawa, City of Maasin, Macrohon, Malitbog, Padre Burgos, Pintuyan, Saint Bernard, San Francisco, San
+Juan, San Ricardo, Silago, Sogod, and Tomas Oppus, SOUTHERN LEYTE; City of Dipolog, ZAMBOANGA DEL NORTE; Mambajao, CAMIGUIN
+
+Intensity III - Daraga, and City of Legazpi, ALBAY; City of Iriga, CAMARINES SUR; Donsol, SORSOGON; Ibajay, Kalibo, Makato, New Washington, and Numancia, AKLAN; Tibiao, ANTIQUE; City of Dumaguete, and Sibulan, NEGROS
+ORIENTAL; Rizal, ZAMBOANGA DEL NORTE; Balingasag, and Laguindingan, MISAMIS ORIENTAL; CITY OF CAGAYAN DE ORO
+
+Intensity II - Gubat, and Juban, SORSOGON; Malay, AKLAN; Sirawai, ZAMBOANGA DEL NORTE; Initao, MISAMIS ORIENTAL
+
+Intensity I - Hinoba-an, NEGROS OCCIDENTAL; Siocon, ZAMBOANGA DEL NORTE; City of Tandag, SURIGAO DEL SUR
+
+Instrumental Intensities:
+Intensity VI - CITY OF CEBU; Villaba, LEYTE
+Intensity V - Esperanza, MASBATE; Argao, Asturias, Danao City, and City of Talisay, CEBU; CITY OF LAPU-LAPU; Abuyog, Carigara, and Hilongos, LEYTE; ORMOC CITY
+Intensity IV - Milagros, MASBATE; Bulusan, SORSOGON; City of Roxas, and Tapaz, CAPIZ; City of Bago, and City of La Carlota, NEGROS OCCIDENTAL; Moalboal, and San Fernando, CEBU; Kawayan, BILIRAN; Alangalang, Dulag, and
+Javier, LEYTE; Palapag, Rosario, and San Roque, NORTHERN SAMAR; Gandara, and Villareal, SAMAR; Hinunangan, Malitbog, and Sogod, SOUTHERN LEYTE
+Intensity III - City of Legazpi, ALBAY; City of Iriga, CAMARINES SUR; Malinao, AKLAN; President Roxas, CAPIZ; Nueva Valencia, and San Lorenzo, GUIMARAS; Talibon, BOHOL; City of Borongan, and Can-Avid, EASTERN SAMAR;
+Matag-Ob, LEYTE; San Jorge, SAMAR; Padre Burgos, SOUTHERN LEYTE; Balingasag, and City of Gingoog, MISAMIS ORIENTAL; City of Surigao, SURIGAO DEL NORTE
+Intensity II - Gumaca, and Mulanay, QUEZON; Ragay, CAMARINES SUR; Panganiban, CATANDUANES; Castilla, SORSOGON; CITY OF ILOILO; Mapanas, NORTHERN SAMAR; Dumingag, ZAMBOANGA DEL SUR; Kapatagan, LANAO DEL
+NORTE; CITY OF CAGAYAN DE ORO
+Intensity I - Mauban, QUEZON; Boac, MARINDUQUE; Pinamalayan, ORIENTAL MINDORO; Mercedes, CAMARINES NORTE; Virac, CATANDUANES; Dalaguete, CEBU; Hernani, EASTERN SAMAR; Marabut, SAMAR; Sindangan, ZAMBOANGA
+DEL NORTE; Initao, MISAMIS ORIENTAL; Tubod, SURIGAO DEL NORTE
+        </pre
+            >
+          </details>
+
+          <div class="mt-6 text-gray-700 text-xs border-t pt-4">
+            Need support or want to contact the site admin? Email:
+            <a
+              href="mailto:rosellarjun@gmail.com"
+              class="text-blue-700 underline"
+            >
+              rosellarjun@gmail.com
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="reportLoader"
+      class="fixed inset-0 bg-white bg-opacity-80 z-[3000] flex flex-col items-center justify-center hidden"
+    >
+      <svg
+        class="animate-spin h-12 w-12 text-blue-600 mb-4"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          class="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="4"
+        ></circle>
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+        ></path>
+      </svg>
+      <span class="text-blue-700 font-medium text-sm"
+        >Submitting your report...</span
+      >
+    </div>
+    <div
+      id="reportSuccess"
+      class="fixed inset-0 bg-white bg-opacity-80 z-[3000] flex flex-col items-center justify-center hidden"
+    >
+      <svg
+        class="h-16 w-16 text-green-500 mb-4"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          class="opacity-20"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="4"
+        ></circle>
+        <path
+          class="animate-success-check"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="3"
+          d="M7 13l3 3 7-7"
+        />
+      </svg>
+      <span class="text-green-700 font-semibold text-lg animate-fade-in"
+        >Report Submitted!</span
+      >
+    </div>
+    <style>
+      @keyframes success-check {
+        0% {
+          stroke-dasharray: 0 24;
+        }
+        100% {
+          stroke-dasharray: 24 0;
+        }
+      }
+      .animate-success-check {
+        stroke-dasharray: 0 24;
+        animation: success-check 0.7s ease forwards;
+      }
+      @keyframes fade-in {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-in {
+        animation: fade-in 0.5s 0.3s both;
+      }
+    </style>
+
+    <script>
+      let map;
+      let markers = [];
+      let userLocation = null;
+      let userMarker = null;
+      let currentFilter = "all";
+      let reports = [];
+      let heatLayer = null;
+
+      function pinUserLocation() {
+        if (userLocation) {
+          map.setView([userLocation.lat, userLocation.lng], map.getZoom());
+          fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${userLocation.lat}&lon=${userLocation.lng}&format=json`
+          )
+            .then((res) => res.json())
+            .then((data) => {
+              const city =
+                data.address.city ||
+                data.address.town ||
+                data.address.municipality ||
+                data.address.village ||
+                data.address.county ||
+                "Unknown Location";
+              const popupText = `
+  <div style="text-align:center;">
+    📍 Your Location<br>
+    <span style="font-size:13px;color:#2563eb;font-weight:bold">${city}</span>
+  </div>
+`;
+              if (userMarker) {
+                userMarker.setLatLng([userLocation.lat, userLocation.lng]);
+                userMarker.setPopupContent(popupText).openPopup();
+              } else {
+                userMarker = L.marker([userLocation.lat, userLocation.lng], {
+                  icon: L.divIcon({
+                    className: "custom-marker",
+                    html: `
+                <div style="
+                  background: #2563eb;
+                  width: 32px;
+                  height: 32px;
+                  border-radius: 50%;
+                  border: 4px solid #fff;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  position: relative;
+                ">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="display:block;" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="6" fill="#fff"/>
+                    <circle cx="12" cy="12" r="3" fill="#2563eb"/>
+                  </svg>
+                </div>
+              `,
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16],
+                  }),
+                  zIndexOffset: 1000,
+                })
+                  .addTo(map)
+                  .bindPopup(popupText)
+                  .openPopup();
+              }
+            })
+            .catch(() => {
+              const popupText =
+                "📍 Your Location<br><span style='font-size:13px;color:#2563eb;'>Unknown</span>";
+              if (userMarker) {
+                userMarker.setLatLng([userLocation.lat, userLocation.lng]);
+                userMarker.setPopupContent(popupText).openPopup();
+              } else {
+                userMarker = L.marker([userLocation.lat, userLocation.lng], {
+                  icon: L.divIcon({
+                    className: "custom-marker",
+                    html: `
+                <div style="
+                  background: #2563eb;
+                  width: 32px;
+                  height: 32px;
+                  border-radius: 50%;
+                  border: 4px solid #fff;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  position: relative;
+                ">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="display:block;" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="6" fill="#fff"/>
+                    <circle cx="12" cy="12" r="3" fill="#2563eb"/>
+                  </svg>
+                </div>
+              `,
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16],
+                  }),
+                  zIndexOffset: 1000,
+                })
+                  .addTo(map)
+                  .bindPopup(popupText)
+                  .openPopup();
+              }
+            });
+        }
+      }
+      function initMap() {
+        map = L.map("map").setView([10.3157, 123.8854], 11);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "© OpenStreetMap contributors",
+        }).addTo(map);
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              userLocation = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+              };
+              pinUserLocation();
+              fetch(
+                `https://nominatim.openstreetmap.org/reverse?lat=${userLocation.lat}&lon=${userLocation.lng}&format=json`
+              )
+                .then((res) => res.json())
+                .then((data) => {
+                  const city =
+                    data.address.city ||
+                    data.address.town ||
+                    data.address.municipality ||
+                    "Cebu";
+                  document.getElementById("locationDisplay").textContent = city;
+                })
+                .catch((err) => {
+                  console.error("Error getting location:", err);
+                  document.getElementById("locationDisplay").textContent =
+                    "Cebu";
+                });
+            },
+            (error) => {
+              console.error("Error getting location:", error);
+              document.getElementById("locationDisplay").textContent = "N/A";
+            }
+          );
+        }
+
+        map.on("click", (e) => {
+          userLocation = { lat: e.latlng.lat, lng: e.latlng.lng };
+          pinUserLocation();
+        });
+
+        if (userLocation) {
+          if (userMarker) {
+            userMarker.setLatLng([userLocation.lat, userLocation.lng]);
+          } else {
+            userMarker = L.marker([userLocation.lat, userLocation.lng], {
+              icon: L.divIcon({
+                className: "custom-marker",
+                html: '<div style="background: #3b82f6; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+              }),
+            })
+              .addTo(map)
+              .bindPopup("📍 Your Location")
+              .openPopup();
+          }
+        }
+      }
+
+      function switchTab(tabName) {
+        document.querySelectorAll(".tab-content").forEach((content) => {
+          content.classList.add("hidden");
+        });
+        document.querySelectorAll(".tab-button").forEach((button) => {
+          button.classList.remove("border-blue-600", "text-blue-600");
+          button.classList.add("border-transparent", "text-gray-600");
+        });
+
+        document
+          .getElementById(`content-${tabName}`)
+          .classList.remove("hidden");
+        document
+          .getElementById(`tab-${tabName}`)
+          .classList.add("border-blue-600", "text-blue-600");
+        document
+          .getElementById(`tab-${tabName}`)
+          .classList.remove("border-transparent", "text-gray-600");
+
+        if (tabName === "stats") {
+          updateStatistics();
+        }
+      }
+
+      function filterReports(filter) {
+        currentFilter = filter;
+
+        document.querySelectorAll('[id^="filter-"]').forEach((btn) => {
+          btn.classList.remove("bg-blue-600", "text-white");
+          btn.classList.add("bg-gray-200", "text-gray-700");
+        });
+        const desktopBtn = document.getElementById(`filter-${filter}`);
+        if (desktopBtn) {
+          desktopBtn.classList.remove("bg-gray-200", "text-gray-700");
+          desktopBtn.classList.add("bg-blue-600", "text-white");
+        }
+
+        document
+          .querySelectorAll('[id^="filter-"][id$="-mobile"]')
+          .forEach((btn) => {
+            btn.classList.remove("bg-blue-600", "text-white");
+            btn.classList.add("bg-gray-200", "text-gray-700");
+          });
+        const mobileBtn = document.getElementById(`filter-${filter}-mobile`);
+        if (mobileBtn) {
+          mobileBtn.classList.remove("bg-gray-200", "text-gray-700");
+          mobileBtn.classList.add("bg-blue-600", "text-white");
+        }
+
+        updateMarkers();
+
+        if (filter === "all" || filter === "help") {
+          if (heatLayer) heatLayer.addTo(map);
+        } else {
+          if (heatLayer) map.removeLayer(heatLayer);
+        }
+      }
+
+      function openReportModal(type) {
+        if (!userLocation) {
+          alert(
+            "Please allow location access or click on the map to set your location"
+          );
+          return;
+        }
+
+        document.getElementById("reportType").value = type;
+        document.getElementById("modalTitle").textContent =
+          type === "help" ? "Report Help Needed" : "Offer Relief Support";
+        document.getElementById("urgencyField").style.display =
+          type === "help" ? "block" : "none";
+        document.getElementById(
+          "modalLocation"
+        ).textContent = `Lat: ${userLocation.lat.toFixed(
+          4
+        )}, Lng: ${userLocation.lng.toFixed(4)}`;
+        document.getElementById("reportModal").classList.remove("hidden");
+        updatePeopleAffectedLabel();
+      }
+
+      function closeReportModal() {
+        document.getElementById("reportModal").classList.add("hidden");
+        document.getElementById("reportForm").reset();
+      }
+
+      function updatePeopleAffectedLabel() {
+        const type = document.getElementById("reportType").value;
+        const label = document.getElementById("peopleAffectedLabel");
+        if (type === "relief") {
+          label.textContent = "People Can Be Helped (Optional)";
+        } else {
+          label.textContent = "Number of People Affected (Optional)";
+        }
+      }
+
+      document.getElementById("reportForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        document.getElementById("reportLoader").classList.remove("hidden");
+
+        const formData = new FormData(e.target);
+        const report = {
+          type: formData.get("type"),
+          category: formData.get("category"),
+          description: formData.get("description"),
+          contactName: formData.get("contactName"),
+          contactPhone: formData.get("contactPhone"),
+          urgency: formData.get("urgency") || "medium",
+          peopleAffected: formData.get("peopleAffected") || "",
+          lat: userLocation.lat,
+          lng: userLocation.lng,
+          timestamp: new Date().toISOString(),
+          status: "pending",
+        };
+
+        const reportsRef = window.dbRef(window.db, "reports");
+        window
+          .dbPush(reportsRef, report)
+          .then(() => {
+            document.getElementById("reportLoader").classList.add("hidden");
+            document.getElementById("reportSuccess").classList.remove("hidden");
+            closeReportModal();
+            map.setView([userLocation.lat, userLocation.lng], 15);
+            setTimeout(() => {
+              document.getElementById("reportSuccess").classList.add("hidden");
+            }, 1500);
+          })
+          .catch((error) => {
+            document.getElementById("reportLoader").classList.add("hidden");
+            console.error("Error saving report:", error);
+          });
+      });
+
+      function updateMarkers() {
+        markers.forEach((marker) => map.removeLayer(marker));
+        markers = [];
+        const filteredReports =
+          currentFilter === "all"
+            ? reports
+            : reports.filter((r) => r.type === currentFilter);
+        filteredReports.forEach((report) => {
+          const color =
+            report.type === "help"
+              ? report.urgency === "high"
+                ? "#ef4444"
+                : report.urgency === "medium"
+                ? "#f97316"
+                : "#eab308"
+              : "#10b981";
+
+          let ping = "";
+          if (report.type === "help") {
+            const pingClass =
+              report.urgency === "high"
+                ? "ping-high"
+                : report.urgency === "medium"
+                ? "ping-medium"
+                : "ping-low";
+            ping = `<span class="ping-urgency ${pingClass}"></span>`;
+          }
+
+          const marker = L.marker([report.lat, report.lng], {
+            icon: L.divIcon({
+              className: "custom-marker",
+              html: `
+          <div style="position:relative; width:30px; height:30px;">
+            ${ping}
+            <div style="background: ${color}; width: 30px; height: 30px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; font-weight: bold; position: absolute; left: 0; top: 0; z-index: 1;">
+              ${report.type === "help" ? "!" : "✓"}
+            </div>
+          </div>
+        `,
+              iconSize: [30, 30],
+            }),
+          }).addTo(map);
+
+          const categoryEmoji = getCategoryEmoji(report.category);
+          const googleMapsLink = `https://www.google.com/maps/dir/?api=1&destination=${report.lat},${report.lng}`;
+
+          marker.bindPopup(`
+  <div style="min-width: 220px;">
+    <div style="margin-bottom: 8px;">
+      <strong style="color: ${color}; font-size: 15px;">
+        ${report.type === "help" ? "🚨 Help Needed" : "✅ Relief Available"}
+      </strong>
+    </div>
+    <p style="margin: 6px 0; font-size: 13px;"><strong>${categoryEmoji} Category:</strong> ${
+            report.category
+          }</p>
+    ${
+      report.urgency && report.type === "help"
+        ? `<p style="margin: 6px 0; font-size: 13px;"><strong>⚠️ Urgency:</strong> <span style="color: ${color}; font-weight: bold;">${report.urgency.toUpperCase()}</span></p>`
+        : ""
+    }
+    <p style="margin: 6px 0; font-size: 13px; color: #374151;">📝 ${
+      report.description
+    }</p>
+    <hr style="margin: 8px 0; border-color: #e5e7eb;">
+    <p style="margin: 6px 0; font-size: 13px;"><strong></strong> 👤 Contact: ${
+      report.contactName
+    }</p>
+    <p style="margin: 6px 0; font-size: 13px;"><strong>📞 Phone:</strong> <a href="tel:${
+      report.contactPhone
+    }" style="color: #2563eb;">${report.contactPhone}</a></p>
+    ${
+      report.peopleAffected && report.type === "help"
+        ? `<p style="margin: 6px 0; font-size: 13px;"><strong>👥 People Affected:</strong> ${report.peopleAffected}</p>`
+        : report.peopleAffected && report.type === "relief"
+        ? `<p style="margin: 6px 0; font-size: 13px;"><strong>👥 People Can Be Helped:</strong> ${report.peopleAffected}</p>`
+        : ""
+    }
+    <p style="margin: 6px 0; font-size: 13px;">
+      <strong>📍 Location:</strong> 
+      <a href="${googleMapsLink}" target="_blank" style="color:#2563eb;text-decoration:underline;">
+        ${report.lat.toFixed(5)}, ${report.lng.toFixed(5)}
+      </a>
+    </p>
+    <p style="margin: 8px 0 0 0; font-size: 11px; color: #6b7280;">🕐 ${new Date(
+      report.timestamp
+    ).toLocaleString()}</p>
+  </div>
+`);
+
+          markers.push(marker);
+        });
+
+        pinUserLocation();
+      }
+
+      function updateRecentReports() {
+        const container = document.getElementById("recentReports");
+        if (reports.length === 0) {
+          container.innerHTML =
+            '<p class="text-sm text-gray-500">No reports yet</p>';
+          return;
+        }
+
+        const recentReports = [...reports].reverse().slice(0, 5);
+        container.innerHTML = recentReports
+          .map((report) => {
+            const color =
+              report.type === "help"
+                ? report.urgency === "high"
+                  ? "bg-red-50 border-red-200"
+                  : report.urgency === "medium"
+                  ? "bg-orange-50 border-orange-200"
+                  : "bg-yellow-50 border-yellow-200"
+                : "bg-green-50 border-green-200";
+            const textColor =
+              report.type === "help"
+                ? report.urgency === "high"
+                  ? "text-red-800"
+                  : report.urgency === "medium"
+                  ? "text-orange-800"
+                  : "text-yellow-800"
+                : "text-green-800";
+            const mapsLink = `https://www.google.com/maps/dir/?api=1&destination=${report.lat},${report.lng}`;
+
+            return `
+        <div class="border ${color} rounded-lg p-3">
+          <div class="flex items-start justify-between mb-1">
+            <span class="text-xs font-semibold ${textColor}">${getCategoryEmoji(
+              report.category
+            )} ${report.category.toUpperCase()}</span>
+            <span class="text-xs text-gray-500">${getTimeAgo(
+              report.timestamp
+            )}</span>
+          </div>
+          <p class="text-xs text-gray-700 line-clamp-2 mb-2">📝 ${
+            report.description
+          }</p>
+          <div class="text-[11px] text-gray-600 mb-1">
+            <strong>👤 ${report.contactName}</strong>
+            <span class="ml-2"><a href="tel:${
+              report.contactPhone
+            }" class="text-blue-600 hover:underline">${
+              report.contactPhone
+            }</a></span>
+          </div>
+          <div class="text-[11px] text-gray-500">
+            <span>
+              📍 <a href="${mapsLink}" target="_blank" class="text-blue-600 hover:underline">
+                ${report.lat.toFixed(4)}, ${report.lng.toFixed(4)}
+              </a>
+            </span>
+            ${
+              report.peopleAffected
+                ? `<span class="ml-2">👥 ${report.peopleAffected}</span>`
+                : ""
+            }
+          </div>
+        </div>
+      `;
+          })
+          .join("");
+      }
+
+      function updateAllReports() {
+        const container = document.getElementById("allReportsList");
+        if (reports.length === 0) {
+          container.innerHTML =
+            '<p class="text-gray-500">No reports available</p>';
+          return;
+        }
+
+        container.innerHTML = [...reports]
+          .reverse()
+          .map((report) => {
+            const color =
+              report.type === "help"
+                ? report.urgency === "high"
+                  ? "border-l-red-500 bg-red-50"
+                  : report.urgency === "medium"
+                  ? "border-l-orange-500 bg-orange-50"
+                  : "border-l-yellow-500 bg-yellow-50"
+                : "border-l-green-500 bg-green-50";
+
+            return `
+                    <div class="border-l-4 ${color} rounded-lg p-6 shadow">
+                        <div class="flex items-start justify-between mb-3">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800">${
+                                  report.type === "help"
+                                    ? "🚨 Help Needed"
+                                    : "✅ Relief Available"
+                                }</h3>
+                                <p class="text-sm text-gray-600">${getCategoryEmoji(
+                                  report.category
+                                )} ${report.category} ${
+              report.urgency && report.type === "help"
+                ? `• <span class="font-semibold">${report.urgency.toUpperCase()} Priority</span>`
+                : ""
+            }</p>
+                            </div>
+                            <span class="text-sm text-gray-500">${new Date(
+                              report.timestamp
+                            ).toLocaleString()}</span>
+                        </div>
+                        <p class="text-gray-700 mb-4">📝 ${
+                          report.description
+                        }</p>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <p class="text-gray-600"><strong>👤 Contact:</strong> ${
+                                  report.contactName
+                                }</p>
+                                <p class="text-gray-600"><strong>📞 Phone:</strong> <a href="tel:${
+                                  report.contactPhone
+                                }" class="text-blue-600 hover:underline">${
+              report.contactPhone
+            }</a></p>
+                            </div>
+                            <div>
+                                <p class="text-gray-600"><strong>📍 Location:</strong> 
+                                  <a href="https://www.google.com/maps/dir/?api=1&destination=${
+                                    report.lat
+                                  },${
+              report.lng
+            }" target="_blank" class="text-blue-600 hover:underline">
+                                    ${report.lat.toFixed(
+                                      4
+                                    )}, ${report.lng.toFixed(4)}
+                                  </a>
+                                </p>
+                                ${
+                                  report.peopleAffected
+                                    ? `<p class="text-gray-600"><strong>👥 People:</strong> ${report.peopleAffected}</p>`
+                                    : ""
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `;
+          })
+          .join("");
+      }
+
+      function updateStatistics() {
+        const totalReports = reports.length;
+        const helpReports = reports.filter((r) => r.type === "help").length;
+        const reliefReports = reports.filter((r) => r.type === "relief").length;
+        const totalPeople = reports.reduce(
+          (sum, r) => sum + (parseInt(r.peopleAffected) || 0),
+          0
+        );
+
+        document.getElementById("stat-total").textContent = totalReports;
+        document.getElementById("stat-help").textContent = helpReports;
+        document.getElementById("stat-relief").textContent = reliefReports;
+        document.getElementById("stat-people").textContent = totalPeople;
+
+        document.getElementById("stat-total-sidebar").textContent = totalReports;
+        document.getElementById("stat-help-sidebar").textContent = helpReports;
+        document.getElementById("stat-relief-sidebar").textContent = reliefReports;
+        document.getElementById("stat-people-sidebar").textContent = totalPeople;
+
+        const categories = {};
+        reports.forEach((report) => {
+          categories[report.category] = (categories[report.category] || 0) + 1;
+        });
+
+        const categoryContainer = document.getElementById("categoryStats");
+        categoryContainer.innerHTML =
+          Object.entries(categories)
+            .map(
+              ([category, count]) => `
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div class="text-2xl mb-2">${getCategoryEmoji(
+                      category
+                    )}</div>
+                    <div class="text-2xl font-bold text-gray-800">${count}</div>
+                    <div class="text-sm text-gray-600 capitalize">${category}</div>
+                </div>
+            `
+            )
+            .join("") ||
+          '<p class="col-span-full text-gray-500">No data available</p>';
+      }
+
+      function getCategoryEmoji(category) {
+        const emojis = {
+          medical: "🏥",
+          food: "🍲",
+          shelter: "🏠",
+          rescue: "🚑",
+          supplies: "📦",
+          other: "🔧",
+        };
+        return emojis[category] || "📋";
+      }
+
+      function getTimeAgo(timestamp) {
+        const seconds = Math.floor((new Date() - new Date(timestamp)) / 1000);
+        if (seconds < 60) return "Just now";
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        const days = Math.floor(hours / 24);
+        return `${days}d ago`;
+      }
+
+      function listenToReports() {
+        const reportsRef = window.dbRef(window.db, "reports");
+        window.dbOnValue(reportsRef, (snapshot) => {
+          const data = snapshot.val();
+          reports = [];
+          if (data) {
+            for (const key in data) {
+              if (data.hasOwnProperty(key)) {
+                reports.push(data[key]);
+              }
+            }
+          }
+          updateMarkers();
+          updateRecentReports();
+          updateAllReports();
+          updateStatistics();
+          updateHeatmap();
+        });
+      }
+
+      function updateHeatmap() {
+        if (heatLayer) {
+          map.removeLayer(heatLayer);
+          heatLayer = null;
+        }
+
+        const urgencyWeights = {
+          high: 1.0,
+          medium: 0.6,
+          low: 0.3,
+        };
+        const heatData = reports
+          .filter((r) => r.lat && r.lng && r.type === "help")
+          .map((r) => [r.lat, r.lng, urgencyWeights[r.urgency] || 0.3]);
+        if (heatData.length > 0) {
+          heatLayer = L.heatLayer(heatData, {
+            radius: 35,
+            blur: 25,
+            maxZoom: 15,
+            gradient: {
+              0.6: "yellow",
+              0.8: "orange",
+              1.0: "red",
+            },
+          });
+          if (currentFilter === "all" || currentFilter === "help") {
+            heatLayer.addTo(map);
+          }
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", () => {
+        initMap();
+        listenToReports();
+      });
+
+      function openIntensityModal() {
+        document.getElementById("intensityModal").classList.remove("hidden");
+      }
+      function closeIntensityModal() {
+        document.getElementById("intensityModal").classList.add("hidden");
+      }
+      document.addEventListener("DOMContentLoaded", () => {
+        openIntensityModal();
+      });
+    </script>
+  </body>
+</html>

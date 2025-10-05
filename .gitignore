@@ -1,0 +1,5 @@
+gitignore
+
+.vercel
+# Firebase
+firebase-config.js
